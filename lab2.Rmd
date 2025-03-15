@@ -1,0 +1,542 @@
+---
+title: "1"
+output:
+  pdf_document: default
+  html_document: default
+date: "2025-2-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. insight
+
+```{r}
+data <- read.csv("data.csv", sep=";")
+str(data)
+
+# Replace "Enrolled" with "Relative Success" in Target column
+data$Target <- as.character(data$Target)  # Convert to character first
+data$Target[data$Target == "Enrolled"] <- "Relative Success"
+data$Target <- factor(data$Target)  # Convert back to factor
+
+```
+
+```{r}
+# Create visualizations for categorical variables
+library(ggplot2)
+library(dplyr)
+
+# Marital status distribution
+ggplot(data, aes(x=factor(Marital.status, 
+                          levels=1:6, 
+                          labels=c("Single", "Married", "Widower", "Divorced", "Facto Union", "Leg. Separated")), 
+                 fill=Target)) +
+  geom_bar(position="fill") +
+  theme_minimal() +
+  labs(title="Distribution by Marital Status", x="Marital Status", y="Proportion")
+
+# Application mode distribution
+app_mode_counts <- data %>%
+  count(Application.mode, Target) %>%
+  group_by(Application.mode) %>%
+  mutate(pct = n/sum(n))
+
+ggplot(app_mode_counts, aes(x=factor(Application.mode), y=pct, fill=Target)) +
+  geom_bar(stat="identity") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle=45, hjust=1)) +
+  labs(title="Distribution by Application Mode", x="Application Mode", y="Proportion")
+
+# Application order (between 0 - first choice; and 9 last choice)
+ggplot(data, aes(x=factor(Application.order), fill=Target)) +
+  geom_bar(position="fill") +
+  theme_minimal() +
+  labs(title="Distribution by Application Order", 
+       x="Application Order (0=First Choice, 9=Last Choice)", 
+       y="Proportion")
+
+# Course distribution (top 10 courses by frequency)
+course_counts <- data %>%
+  count(Course) %>%
+  arrange(desc(n)) %>%
+  head(10)
+
+top_courses <- course_counts$Course
+course_data <- data %>% filter(Course %in% top_courses)
+
+ggplot(course_data, aes(x=factor(Course), fill=Target)) +
+  geom_bar(position="fill") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle=45, hjust=1)) +
+  labs(title="Distribution by Top 10 Courses", x="Course Code", y="Proportion")
+
+# Daytime/evening attendance
+ggplot(data, aes(x=factor(Daytime.evening.attendance.), fill=Target)) +
+  geom_bar(position="fill") +
+  theme_minimal() +
+  labs(title="Distribution by Attendance Type", 
+       x="Attendance (0=Evening, 1=Daytime)", 
+       y="Proportion")
+
+# Previous qualification
+ggplot(data, aes(x=factor(Previous.qualification), fill=Target)) +
+  geom_bar(position="fill") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle=45, hjust=1)) +
+  labs(title="Distribution by Previous Qualification", x="Previous Qualification", y="Proportion")
+
+# Previous qualification grade
+ggplot(data, aes(x=Previous.qualification..grade., fill=Target)) +
+  geom_density(alpha=0.5) +
+  theme_minimal() +
+  labs(title="Previous Qualification Grade by Outcome", 
+       x="Previous Qualification Grade", 
+       y="Density")
+
+# Nationality
+nationality_counts <- data %>%
+  count(Nacionality) %>%
+  arrange(desc(n)) %>%
+  head(10)
+
+top_nationalities <- nationality_counts$Nacionality
+nationality_data <- data %>% filter(Nacionality %in% top_nationalities)
+
+ggplot(nationality_data, aes(x=factor(Nacionality), fill=Target)) +
+  geom_bar(position="fill") +
+  theme_minimal() +
+  labs(title="Distribution by Top Nationalities", x="Nationality Code", y="Proportion")
+
+# Gender
+ggplot(data, aes(x=factor(Gender), fill=Target)) +
+  geom_bar(position="fill") +
+  theme_minimal() +
+  labs(title="Distribution by Gender", x="Gender (0=Male, 1=Female)", y="Proportion")
+
+# International student status
+ggplot(data, aes(x=factor(International), fill=Target)) +
+  geom_bar(position="fill") +
+  theme_minimal() +
+  labs(title="Distribution by International Status", 
+       x="International Student (0=No, 1=Yes)", 
+       y="Proportion")
+
+# Displaced student status
+ggplot(data, aes(x=factor(Displaced), fill=Target)) +
+  geom_bar(position="fill") +
+  theme_minimal() +
+  labs(title="Distribution by Displaced Status", 
+       x="Displaced Student (0=No, 1=Yes)", 
+       y="Proportion")
+
+# Educational special needs
+ggplot(data, aes(x=factor(Educational.special.needs), fill=Target)) +
+  geom_bar(position="fill") +
+  theme_minimal() +
+  labs(title="Distribution by Special Educational Needs", 
+       x="Special Educational Needs (0=No, 1=Yes)", 
+       y="Proportion")
+
+# Debtor status
+ggplot(data, aes(x=factor(Debtor), fill=Target)) +
+  geom_bar(position="fill") +
+  theme_minimal() +
+  labs(title="Distribution by Debtor Status", 
+       x="Debtor (0=No, 1=Yes)", 
+       y="Proportion")
+
+# Tuition fees up to date
+ggplot(data, aes(x=factor(Tuition.fees.up.to.date), fill=Target)) +
+  geom_bar(position="fill") +
+  theme_minimal() +
+  labs(title="Distribution by Tuition Payment Status", 
+       x="Tuition Fees Up to Date (0=No, 1=Yes)", 
+       y="Proportion")
+
+# First semester academic metrics
+# Create a combined plot for first semester metrics
+first_sem_data <- data %>%
+  select(Curricular.units.1st.sem..enrolled., 
+         Curricular.units.1st.sem..approved.,
+         Target) %>%
+  rename(Enrolled = Curricular.units.1st.sem..enrolled.,
+         Approved = Curricular.units.1st.sem..approved.)
+
+# Calculate approval rate
+first_sem_data <- first_sem_data %>%
+  mutate(ApprovalRate = ifelse(Enrolled > 0, Approved/Enrolled, 0))
+
+ggplot(first_sem_data, aes(x=ApprovalRate, fill=Target)) +
+  geom_density(alpha=0.5) +
+  theme_minimal() +
+  labs(title="First Semester Approval Rate by Outcome", 
+       x="Approval Rate (Approved/Enrolled)", 
+       y="Density")
+
+# Second semester academic metrics
+second_sem_data <- data %>%
+  select(Curricular.units.2nd.sem..enrolled., 
+         Curricular.units.2nd.sem..approved.,
+         Target) %>%
+  rename(Enrolled = Curricular.units.2nd.sem..enrolled.,
+         Approved = Curricular.units.2nd.sem..approved.)
+
+# Calculate approval rate
+second_sem_data <- second_sem_data %>%
+  mutate(ApprovalRate = ifelse(Enrolled > 0, Approved/Enrolled, 0))
+
+ggplot(second_sem_data, aes(x=ApprovalRate, fill=Target)) +
+  geom_density(alpha=0.5) +
+  theme_minimal() +
+  labs(title="Second Semester Approval Rate by Outcome", 
+       x="Approval Rate (Approved/Enrolled)", 
+       y="Density")
+
+# Economic indicators by outcome
+ggplot(data, aes(x=Unemployment.rate, y=Inflation.rate, color=Target)) +
+  geom_point(alpha=0.6) +
+  theme_minimal() +
+  labs(title="Economic Indicators by Outcome", 
+       x="Unemployment Rate", 
+       y="Inflation Rate")
+
+# GDP by outcome (already in the file)
+
+```
+
+## 2. plot
+
+```{r}
+library(ggplot2)
+
+# Plot distribution of Target variable
+ggplot(data, aes(x=Target, fill=Target)) +
+  geom_bar() +
+  theme_minimal() +
+  labs(title="Distribution of Student Outcomes", x="Outcome", y="Count")
+
+# Plot age distribution by outcome
+ggplot(data, aes(x=Age.at.enrollment, fill=Target)) +
+  geom_density(alpha=0.5) +
+  theme_minimal() +
+  labs(title="Age Distribution by Outcome", x="Age at Enrollment", y="Density")
+
+# Plot admission grade distribution by outcome  
+ggplot(data, aes(x=Admission.grade, fill=Target)) +
+  geom_density(alpha=0.5) +
+  theme_minimal() +
+  labs(title="Admission Grade Distribution by Outcome", x="Admission Grade", y="Density")
+
+# Plot first semester performance by outcome
+ggplot(data, aes(x=Curricular.units.1st.sem..grade., fill=Target)) +
+  geom_density(alpha=0.5) +
+  theme_minimal() +
+  labs(title="First Semester Grades by Outcome", x="First Semester Grade", y="Density")
+
+# Plot economic indicators
+economic_data <- data.frame(
+  Rate = c(data$Unemployment.rate, data$Inflation.rate, data$GDP),
+  Type = rep(c("Unemployment", "Inflation", "GDP"), each=nrow(data))
+)
+
+ggplot(economic_data, aes(x=Rate, fill=Type)) +
+  geom_density(alpha=0.5) +
+  theme_minimal() +
+  labs(title="Distribution of Economic Indicators", x="Rate", y="Density")
+
+# Plot categorical variables distributions
+# Marital status by outcome
+ggplot(data, aes(x=factor(Marital.status), fill=Target)) +
+  geom_bar(position="dodge") +
+  theme_minimal() +
+  labs(title="Marital Status Distribution by Outcome", x="Marital Status", y="Count")
+
+# Application mode by outcome  
+ggplot(data, aes(x=factor(Application.mode), fill=Target)) +
+  geom_bar(position="dodge") +
+  theme_minimal() +
+  labs(title="Application Mode Distribution by Outcome", x="Application Mode", y="Count")
+
+# Course distribution by outcome
+ggplot(data, aes(x=factor(Course), fill=Target)) +
+  geom_bar(position="dodge") +
+  theme_minimal() +
+  labs(title="Course Distribution by Outcome", x="Course Code", y="Count")
+
+# Gender by outcome
+ggplot(data, aes(x=factor(Gender), fill=Target)) +
+  geom_bar(position="dodge") +
+  theme_minimal() +
+  labs(title="Gender Distribution by Outcome", x="Gender (0=Male, 1=Female)", y="Count")
+
+# Scholarship status by outcome
+ggplot(data, aes(x=factor(Scholarship.holder), fill=Target)) +
+  geom_bar(position="dodge") +
+  theme_minimal() +
+  labs(title="Scholarship Status by Outcome", x="Scholarship Holder (0=No, 1=Yes)", y="Count")
+
+# Tuition payment status by outcome
+ggplot(data, aes(x=factor(Tuition.fees.up.to.date), fill=Target)) +
+  geom_bar(position="dodge") +
+  theme_minimal() +
+  labs(title="Tuition Payment Status by Outcome", x="Tuition Up to Date (0=No, 1=Yes)", y="Count")
+
+
+
+
+
+
+
+# Age density by outcome
+ggplot(data, aes(x=Age.at.enrollment, fill=Target)) +
+  geom_density(alpha=0.5) +
+  theme_minimal() +
+  labs(title="Age Distribution by Outcome", x="Age at Enrollment", y="Density")
+
+# Admission grade distribution by outcome
+ggplot(data, aes(x=Admission.grade, fill=Target)) +
+  geom_density(alpha=0.5) +
+  theme_minimal() +
+  labs(title="Admission Grade Distribution by Outcome", x="Admission Grade", y="Density")
+
+# Economic indicators by outcome
+ggplot(data, aes(x=Target, y=Unemployment.rate)) +
+  geom_boxplot(fill="lightblue") +
+  theme_minimal() +
+  labs(title="Unemployment Rate by Outcome", x="Outcome", y="Unemployment Rate")
+
+ggplot(data, aes(x=Target, y=Inflation.rate)) +
+  geom_boxplot(fill="lightgreen") +
+  theme_minimal() +
+  labs(title="Inflation Rate by Outcome", x="Outcome", y="Inflation Rate")
+
+ggplot(data, aes(x=Target, y=GDP)) +
+  geom_boxplot(fill="lightpink") +
+  theme_minimal() +
+  labs(title="GDP by Outcome", x="Outcome", y="GDP")
+
+# Dropout rate by course
+library(dplyr)
+course_dropout <- data %>%
+  group_by(Course) %>%
+  summarize(
+    dropout_count = sum(Target == "Dropout"),
+    total_students = n(),
+    dropout_rate = dropout_count / total_students
+  ) %>%
+  filter(total_students > 10) %>%  # Filter courses with >10 students for significance
+  arrange(desc(dropout_rate))
+
+ggplot(course_dropout, aes(x=reorder(factor(Course), -dropout_rate), y=dropout_rate)) +
+  geom_bar(stat="identity", fill="coral") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title="Dropout Rate by Course (Normalized by Course Size)", 
+       x="Course Code", 
+       y="Dropout Rate (Dropouts/Total Students)")
+
+# Scholarship impact
+ggplot(data, aes(x=factor(Scholarship.holder), fill=Target)) +
+  geom_bar(position="fill") +
+  theme_minimal() +
+  labs(title="Academic Outcome by Scholarship Status", 
+       x="Scholarship Holder (0=No, 1=Yes)", 
+       y="Proportion")
+
+# Parental education impact
+# Mother's education
+ggplot(data, aes(x=factor(Mother.s.qualification), fill=Target)) +
+  geom_bar(position="fill") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title="Academic Outcome by Mother's Education Level", 
+       x="Mother's Education Level", 
+       y="Proportion")
+
+# Father's education
+ggplot(data, aes(x=factor(Father.s.qualification), fill=Target)) +
+  geom_bar(position="fill") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title="Academic Outcome by Father's Education Level", 
+       x="Father's Education Level", 
+       y="Proportion")
+
+```
+
+## 3.
+```{r}
+# Analyzing parental qualification and occupation impact on student outcomes
+
+# Create a combined parental education level plot
+# First, create a summary dataframe for visualization
+
+# Define education level mapping for better readability
+education_mapping <- c(
+  "1" = "Secondary Education",
+  "2" = "Bachelor's Degree",
+  "3" = "Higher Education Degree",
+  "4" = "Master's Degree",
+  "5" = "Doctorate",
+  "6" = "Freq. Higher Education",
+  "9" = "12th Year (Not Completed)",
+  "10" = "11th Year (Not Completed)",
+  "12" = "Other - 11th Year",
+  "14" = "10th Year",
+  "15" = "10th Year (Not Completed)",
+  "19" = "Basic Education 3rd Cycle",
+  "38" = "Basic Education 2nd Cycle",
+  "39" = "Tech Specialization",
+  "40" = "Higher Ed. Degree (1st Cycle)",
+  "42" = "Prof. Higher Tech Course",
+  "43" = "Master's (2nd Cycle)"
+)
+
+# Create summary with readable education levels
+parent_edu_summary <- data %>%
+  group_by(Mother.s.qualification, Father.s.qualification) %>%
+  summarize(
+    dropout_rate = mean(Target == "Dropout"),
+    graduate_rate = mean(Target == "Graduate"),
+    enrolled_rate = mean(Target == "Enrolled"),
+    count = n(),
+    .groups = "drop"
+  ) %>%
+  filter(count >= 5) %>% # Filter to include only combinations with sufficient data
+  mutate(
+    Mother_Education = factor(Mother.s.qualification, 
+                             levels = names(education_mapping),
+                             labels = education_mapping),
+    Father_Education = factor(Father.s.qualification,
+                             levels = names(education_mapping),
+                             labels = education_mapping)
+  )
+
+# Update the subsequent plot to use the readable labels
+ggplot(parent_edu_summary, 
+       aes(x = Mother_Education, 
+           y = Father_Education, 
+           fill = dropout_rate)) +
+  geom_tile() +
+  scale_fill_gradient(low = "green", high = "red") +
+  theme_minimal() +
+  labs(title = "Dropout Rate by Parents' Education Levels",
+       x = "Mother's Education Level",
+       y = "Father's Education Level",
+       fill = "Dropout Rate") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Plot heatmap of dropout rates by parental education
+ggplot(parent_edu_summary, 
+       aes(x = factor(Mother.s.qualification), 
+           y = factor(Father.s.qualification), 
+           fill = dropout_rate)) +
+  geom_tile() +
+  scale_fill_gradient(low = "green", high = "red") +
+  theme_minimal() +
+  labs(title = "Dropout Rate by Parents' Education Levels",
+       x = "Mother's Education Level",
+       y = "Father's Education Level",
+       fill = "Dropout Rate") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Parental occupation impact
+# Create occupation categories for better visualization
+occupation_mapping <- c(
+  "0" = "Student",
+  "1" = "Managers & Executives",
+  "2" = "Intellectual & Scientific Specialists",
+  "3" = "Technicians & Intermediate Professions",
+  "4" = "Administrative Staff",
+  "5" = "Service/Security/Sales Workers",
+  "6" = "Agriculture/Fishery/Forestry Workers",
+  "7" = "Industry/Construction/Craft Workers",
+  "8" = "Machine Operators & Assembly Workers",
+  "9" = "Unskilled Workers",
+  "10" = "Armed Forces",
+  "90" = "Other Situation",
+  "99" = "Not Specified",
+  "122" = "Health Professionals",
+  "123" = "Teachers",
+  "124" = "ICT Specialists",
+  "125" = "ICT Specialists",
+  "131" = "Science & Engineering Technicians",
+  "132" = "Health Technicians",
+  "134" = "Legal/Social/Cultural Technicians",
+  "141" = "Office Workers & Secretaries",
+  "143" = "Data & Financial Operators",
+  "144" = "Other Administrative Support",
+  "151" = "Personal Service Workers",
+  "152" = "Sellers",
+  "153" = "Personal Care Workers",
+  "171" = "Construction Workers",
+  "173" = "Printing/Precision/Jewelry Workers",
+  "175" = "Food/Wood/Clothing Industry Workers",
+  "191" = "Cleaning Workers",
+  "192" = "Agriculture/Fishery Laborers",
+  "193" = "Mining/Construction/Manufacturing Laborers",
+  "194" = "Meal Preparation Assistants"
+)
+
+# Create a new dataframe with mapped occupation categories
+data_occ <- data %>%
+  mutate(
+    Mother_Occ_Cat = ifelse(Mother.s.occupation <= 10, 
+                           as.character(Mother.s.occupation), "90"),
+    Father_Occ_Cat = ifelse(Father.s.occupation <= 10, 
+                           as.character(Father.s.occupation), "90")
+  )
+
+# Mother's occupation
+ggplot(data_occ, aes(x = Mother_Occ_Cat, fill = Target)) +
+  geom_bar(position = "fill") +
+  scale_x_discrete(labels = occupation_mapping) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Academic Outcome by Mother's Occupation",
+       x = "Mother's Occupation",
+       y = "Proportion")
+
+# Father's occupation
+ggplot(data_occ, aes(x = Father_Occ_Cat, fill = Target)) +
+  geom_bar(position = "fill") +
+  scale_x_discrete(labels = occupation_mapping) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Academic Outcome by Father's Occupation",
+       x = "Father's Occupation",
+       y = "Proportion")
+
+# Combined parental occupation effect
+# Create a summary of outcomes by combined parental occupations
+parent_occ_summary <- data_occ %>%
+  group_by(Mother_Occ_Cat, Father_Occ_Cat) %>%
+  summarize(
+    dropout_rate = mean(Target == "Dropout"),
+    count = n()
+  ) %>%
+  filter(count >= 5) # Filter to include only combinations with sufficient data
+
+# Plot heatmap of dropout rates by parental occupations
+ggplot(parent_occ_summary, 
+       aes(x = Mother_Occ_Cat, 
+           y = Father_Occ_Cat, 
+           fill = dropout_rate)) +
+  geom_tile() +
+  scale_fill_gradient(low = "green", high = "red") +
+  scale_x_discrete(labels = occupation_mapping) +
+  scale_y_discrete(labels = occupation_mapping) +
+  theme_minimal() +
+  labs(title = "Dropout Rate by Parents' Occupations",
+       x = "Mother's Occupation",
+       y = "Father's Occupation",
+       fill = "Dropout Rate") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+```{r}
+
+```

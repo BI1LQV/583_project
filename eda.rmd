@@ -1,0 +1,274 @@
+```{r}
+data <- read.csv("data.csv", sep=";")
+str(data)
+```
+transform factors:
+```{r}
+# Convert categorical variables to factors
+# First load dplyr if needed
+library(dplyr)
+
+# Convert categorical variables to factors
+data <- data %>%
+  mutate(
+    Marital.status = as.factor(Marital.status),
+    Application.mode = as.factor(Application.mode),
+    Course = as.factor(Course),
+    Daytime.evening.attendance. = as.factor(Daytime.evening.attendance.),
+    Previous.qualification = as.factor(Previous.qualification),
+    Nacionality = as.factor(Nacionality),
+    Mother.s.qualification = as.factor(Mother.s.qualification),
+    Father.s.qualification = as.factor(Father.s.qualification),
+    Mother.s.occupation = as.factor(Mother.s.occupation),
+    Father.s.occupation = as.factor(Father.s.occupation),
+    Displaced = as.factor(Displaced),
+    Educational.special.needs = as.factor(Educational.special.needs),
+    Debtor = as.factor(Debtor),
+    Tuition.fees.up.to.date = as.factor(Tuition.fees.up.to.date),
+    Gender = as.factor(Gender),
+    Scholarship.holder = as.factor(Scholarship.holder),
+    International = as.factor(International),
+    Target = as.factor(Target)
+  )
+
+# Check the structure after conversion
+str(data)
+
+```
+
+drop semester's credits
+```{r}
+
+data <- data %>%
+  mutate(
+    # First semester pass rate
+    sem1_pass_rate = Curricular.units.1st.sem..approved. / Curricular.units.1st.sem..enrolled.,
+    # Second semester pass rate
+    sem2_pass_rate = Curricular.units.2nd.sem..approved. / Curricular.units.2nd.sem..enrolled.
+  ) %>%
+  select(-Curricular.units.1st.sem..credited.,
+         -Curricular.units.1st.sem..enrolled.,
+         -Curricular.units.1st.sem..evaluations.,
+         -Curricular.units.1st.sem..approved.,
+         -Curricular.units.1st.sem..grade.,
+         -Curricular.units.1st.sem..without.evaluations.,
+         -Curricular.units.2nd.sem..credited.,
+         -Curricular.units.2nd.sem..enrolled.,
+         -Curricular.units.2nd.sem..evaluations.,
+         -Curricular.units.2nd.sem..approved.,
+         -Curricular.units.2nd.sem..grade.,
+         -Curricular.units.2nd.sem..without.evaluations.)
+
+# Replace NaN values with 0 in the pass rate columns
+data <- data %>%
+  mutate(
+    sem1_pass_rate = ifelse(is.na(sem1_pass_rate), 0, sem1_pass_rate),
+    sem2_pass_rate = ifelse(is.na(sem2_pass_rate), 0, sem2_pass_rate)
+  )
+str(data)
+
+```
+
+```{r}
+# Detect factor variables in the dataset
+categorical_vars <- names(data)[sapply(data, is.factor)]
+print("Categorical variables in the dataset:")
+print(categorical_vars)
+
+# Create dataframe to store ANOVA results
+anova_results <- data.frame(Variable = character(), F_Value = numeric(), P_Value = numeric(), stringsAsFactors = FALSE)
+
+# Perform ANOVA for each categorical variable directly with Target
+for (var in categorical_vars) {
+  # Skip Target itself
+  if (var != "Target") {
+    # Create formula for ANOVA
+    formula <- as.formula(paste("as.numeric(Target) ~", var))
+    
+    # Run ANOVA test with error handling
+    tryCatch({
+      anova_result <- summary(aov(formula, data = data))
+      
+      # Extract F and p values
+      f_val <- anova_result[[1]]["F value"][[1]][1]
+      p_val <- anova_result[[1]]["Pr(>F)"][[1]][1]
+      
+      # Add results to dataframe
+      anova_results <- rbind(anova_results, data.frame(Variable = var, F_Value = f_val, P_Value = p_val))
+    }, error = function(e) {
+      cat("Error analyzing variable:", var, "\n")
+      cat("Error message:", e$message, "\n")
+    })
+  }
+}
+
+# Sort results by p-value (ascending)
+if(nrow(anova_results) > 0) {
+  anova_results <- anova_results[order(anova_results$P_Value), ]
+  
+  # Print ranked table
+  cat("ANOVA Results for Target (Ranked by p-value):\n")
+  print(anova_results %>% mutate(F_Value = round(F_Value, 4), P_Value = round(P_Value, 6)))
+} else {
+  cat("No valid ANOVA results were obtained.\n")
+}
+
+# For specific analysis of dropout vs. enrolled vs. graduate
+# Create binary indicator variables
+data$Target_Enrolled <- ifelse(data$Target == "Enrolled", 1, 0)
+data$Target_Graduate <- ifelse(data$Target == "Graduate", 1, 0)
+data$Target_Dropout <- ifelse(data$Target == "Dropout", 1, 0)
+
+# Alternative approach using chi-square tests
+chi_results <- data.frame(Variable = character(), Chi_Square = numeric(), 
+                          P_Value = numeric(), stringsAsFactors = FALSE)
+
+for (var in categorical_vars) {
+  if (var != "Target") {
+    tryCatch({
+      # Create contingency table
+      cont_table <- table(data[[var]], data$Target)
+      
+      # Run chi-square test
+      chi_test <- chisq.test(cont_table, simulate.p.value = TRUE)
+      
+      # Add results to dataframe
+      chi_results <- rbind(chi_results, 
+                          data.frame(Variable = var, 
+                                    Chi_Square = chi_test$statistic,
+                                    P_Value = chi_test$p.value))
+    }, error = function(e) {
+      cat("Error in chi-square test for variable:", var, "\n")
+    })
+  }
+}
+
+# Sort and display chi-square results
+if(nrow(chi_results) > 0) {
+  chi_results <- chi_results[order(chi_results$P_Value), ]
+  cat("\nChi-Square Test Results for Target (Ranked by p-value):\n")
+  print(chi_results %>% mutate(Chi_Square = round(Chi_Square, 4), P_Value = round(P_Value, 6)))
+}
+
+```
+
+```{r}
+
+# Drop unnecessary columns
+data <- data %>%
+  select(-Nacionality, -Educational.special.needs, -International)
+
+
+```
+
+
+```{r}
+# Perform VIF analysis on numeric variables
+# First, let's identify the numeric variables in our dataset
+numeric_vars <- data %>%
+  select(where(is.numeric)) %>%
+  names()
+
+# Print the numeric variables
+cat("Numeric variables in the dataset:\n")
+print(numeric_vars)
+
+# Create a dataframe with only numeric variables for VIF analysis
+# Exclude target-encoded variables to avoid multicollinearity with their source variables
+numeric_data <- data %>%
+  select(where(is.numeric)) %>%
+  select(-contains("target_value"), -contains("count"))
+
+# Print the variables used for VIF analysis
+cat("\nVariables used for VIF analysis:\n")
+print(names(numeric_data))
+
+# Create a linear model using all numeric variables
+# We'll use sem1_pass_rate as the dependent variable for this analysis
+model <- lm(sem1_pass_rate ~ ., data = numeric_data)
+
+# Calculate VIF values
+library(car)
+#vif_values <- vif(model)
+
+# Display VIF values
+#cat("\nVariance Inflation Factors (VIF):\n")
+#print(vif_values)
+
+
+```
+
+
+combine parent's background
+```{r}
+# Combine parents' background information using target encoding approach
+# First, create temporary dataframes with target encoding for each parent variable
+
+# Function to calculate target encoding (average dropout rate per category)
+calculate_target_encoding <- function(data, var_name) {
+  data %>%
+    group_by(!!sym(var_name)) %>%
+    summarize(
+      target_value = mean(as.numeric(factor(Target, levels = c("Dropout", "Enrolled", "Graduate")))),
+      count = n(),
+      .groups = "drop"
+    )
+}
+
+# Calculate target encodings for each parent variable
+mother_edu_encoding <- calculate_target_encoding(data, "Mother.s.qualification")
+father_edu_encoding <- calculate_target_encoding(data, "Father.s.qualification")
+mother_occ_encoding <- calculate_target_encoding(data, "Mother.s.occupation")
+father_occ_encoding <- calculate_target_encoding(data, "Father.s.occupation")
+
+# Join the encodings back to the original data
+data <- data %>%
+  left_join(mother_edu_encoding, by = c("Mother.s.qualification" = "Mother.s.qualification")) %>%
+  rename(mother_edu_target_value = target_value, mother_edu_count = count) %>%
+  left_join(father_edu_encoding, by = c("Father.s.qualification" = "Father.s.qualification")) %>%
+  rename(father_edu_target_value = target_value, father_edu_count = count) %>%
+  left_join(mother_occ_encoding, by = c("Mother.s.occupation" = "Mother.s.occupation")) %>%
+  rename(mother_occ_target_value = target_value, mother_occ_count = count) %>%
+  left_join(father_occ_encoding, by = c("Father.s.occupation" = "Father.s.occupation")) %>%
+  rename(father_occ_target_value = target_value, father_occ_count = count)
+
+# Create combined variables using the average of target encodings
+data <- data %>%
+  mutate(
+    # Average parent education dropout rate
+    parents_edu_target_value = (mother_edu_target_value + father_edu_target_value) / 2,
+    
+    # Average parent occupation dropout rate
+    parents_occ_target_value = (mother_occ_target_value + father_occ_target_value) / 2,
+    
+    # Combined parent background dropout rate
+    parents_background_target_value = (mother_edu_target_value + father_edu_target_value + 
+                                      mother_occ_target_value + father_occ_target_value) / 4
+  )
+
+# Remove the intermediate columns and original parent columns
+data <- data %>%
+  select(-mother_edu_target_value, -mother_edu_count,
+         -father_edu_target_value, -father_edu_count,
+         -mother_occ_target_value, -mother_occ_count,
+         -father_occ_target_value, -father_occ_count,
+         -Mother.s.qualification, -Father.s.qualification,
+         -Mother.s.occupation, -Father.s.occupation)
+
+# Check the structure of the new variables
+str(data)
+
+
+
+```
+
+```{r}
+library(MASS)
+data$Target <- factor(data$Target, levels = c("Dropout","Enrolled" ,"Graduate"), ordered = TRUE)
+data[, sapply(data, is.numeric)] <- scale(data[, sapply(data, is.numeric)])
+model <- polr(Target ~ Marital.status + Application.mode + Application.order + Course + Daytime.evening.attendance. + Previous.qualification + Previous.qualification..grade. + Admission.grade + Displaced + Debtor + Tuition.fees.up.to.date + Gender + Scholarship.holder + Age.at.enrollment + Unemployment.rate + Inflation.rate + GDP + sem1_pass_rate + sem2_pass_rate + Target_Enrolled + Target_Graduate + Target_Dropout + parents_edu_target_value + parents_occ_target_value + parents_background_target_value
+ , data = data, method = "logistic")
+
+summary(model)  # 查看系数
+
+```
