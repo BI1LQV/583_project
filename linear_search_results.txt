@@ -1,0 +1,67 @@
+Linear Parameter Search Results:
+Baseline Performance:
+Train Loss: 0.8187
+Train Accuracy: 0.6510
+Test Accuracy: 0.6237
+Best Epoch: 62
+==================================================
+Parameter: learning_rate=0.0001
+Train Loss: 0.8649
+Train Accuracy: 0.6298
+Test Accuracy: 0.6158
+Best Epoch: 108
+==================================================
+Parameter: learning_rate=0.01
+Train Loss: 0.8117
+Train Accuracy: 0.6572
+Test Accuracy: 0.6102
+Best Epoch: 52
+==================================================
+Parameter: learning_rate=0.1
+Train Loss: 0.9043
+Train Accuracy: 0.6208
+Test Accuracy: 0.5966
+Best Epoch: 15
+==================================================
+Parameter: batch_size=32
+Train Loss: 0.8212
+Train Accuracy: 0.6578
+Test Accuracy: 0.6305
+Best Epoch: 73
+==================================================
+Parameter: batch_size=128
+Train Loss: 0.7983
+Train Accuracy: 0.6688
+Test Accuracy: 0.6226
+Best Epoch: 123
+==================================================
+Parameter: batch_size=512
+Train Loss: 0.8384
+Train Accuracy: 0.6434
+Test Accuracy: 0.6384
+Best Epoch: 62
+==================================================
+Parameter: batch_size=1024
+Train Loss: 0.8301
+Train Accuracy: 0.6420
+Test Accuracy: 0.6169
+Best Epoch: 90
+==================================================
+Parameter: dropout_rate=0.1
+Train Loss: 0.8048
+Train Accuracy: 0.6618
+Test Accuracy: 0.6124
+Best Epoch: 56
+==================================================
+Parameter: dropout_rate=0.3
+Train Loss: 0.8460
+Train Accuracy: 0.6363
+Test Accuracy: 0.6147
+Best Epoch: 41
+==================================================
+Parameter: dropout_rate=0.4
+Train Loss: 0.8554
+Train Accuracy: 0.6341
+Test Accuracy: 0.6271
+Best Epoch: 52
+==================================================
